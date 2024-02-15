@@ -1,0 +1,217 @@
+using System.Diagnostics;
+using System.Xml.Linq;
+
+internal class Program
+{
+    private static void Main(string[] args)
+    {
+        CarService carService = new CarService();
+        carService.ShowMenu();
+    }
+}
+
+public class Detail
+{
+    public Detail(string name, int price)
+    {
+        Name = name;
+        Price = price;
+    }
+
+    public string Name { get; private set; }
+    public int Price { get; private set; }
+}
+
+public class DetailStockItem
+{
+    public DetailStockItem(Detail detail, int quantity)
+    {
+        Detail = detail;
+        Quantity = quantity;
+    }
+
+    public Detail Detail { get; private set; }
+    public int Quantity { get; private set; }
+
+    public void DecreaseQuantity()
+    {
+        if (Quantity > 0)
+            Quantity--;
+    }
+
+    public void ShowInfo()
+    {
+        Console.WriteLine($"Деталь - {Detail.Name}. Стоимость детали - {Detail.Price}. Количество на складе: {Quantity}.");
+    }
+}
+
+public class Car
+{
+    public Car(string name, string nameDetail)
+    {
+        Name = name;
+        NameDetail = nameDetail;
+    }
+
+    public string Name { get; private set; }
+    public string NameDetail { get; private set; }
+
+    public void ShowInfo()
+    {
+        Console.WriteLine($"В данном автомобиле {Name} нужно заменить деталь - {NameDetail}.");
+    }
+}
+
+public class CarService
+{
+    private List<DetailStockItem> _detailStockItems = new List<DetailStockItem>();
+    private Queue<Car> _cars = new Queue<Car>();
+    private int _earnings = 0;
+
+    public void ShowMenu()
+    {
+        const string CommandShowWarehouse = "1";
+        const string CommandTakeCarInForRepairs = "2";
+        const string CommandFinishWorkingDay = "3";
+        
+        bool isWorkService = true;
+
+        AddDetails();
+        AddCars();
+
+        while (isWorkService)
+        {
+            Console.WriteLine("Автосервис.");
+            Console.WriteLine($"Баланс автосервиса: {_earnings} руб.");
+            Console.WriteLine("Выбери пункт меню: ");
+            Console.WriteLine($"{CommandShowWarehouse} - Посмотреть склад запчастей.");
+            Console.WriteLine($"{CommandTakeCarInForRepairs} - Принять машину на ремонт.");
+            Console.WriteLine($"{CommandFinishWorkingDay} - Закончить рабочий день.");
+            string userInput = Console.ReadLine();
+
+            switch (userInput)
+            {
+                case CommandShowWarehouse:
+                    ShowWarehouse();
+                    break;
+
+                case CommandTakeCarInForRepairs:
+                    GetCarForRepair();
+                    break;
+
+                case CommandFinishWorkingDay:
+                    Console.WriteLine("Рабочий день закончился.");
+                    isWorkService = false;
+                    break;
+
+                default:
+                    Console.WriteLine("Такой команды нет! Попробуйте снова.");
+                    break;
+            }
+
+            Console.WriteLine("Нажмите любую клавишу чтобы продолжить");
+            Console.ReadKey();
+            Console.Clear();
+        }
+    }
+
+    private void AddDetails()
+    {
+        _detailStockItems.Add(new DetailStockItem(new Detail("Тормозные колодки", 500), 2));
+        _detailStockItems.Add(new DetailStockItem(new Detail("Фильтр маслянный", 200), 1));
+        _detailStockItems.Add(new DetailStockItem(new Detail("Воздушный фильтр", 220), 1));
+        _detailStockItems.Add(new DetailStockItem(new Detail("Масло", 800), 1));
+    }
+
+    private void ShowWarehouse()
+    {
+        Console.WriteLine("Товары на складе: ");
+
+        foreach (var detail in _detailStockItems)
+        {
+            detail.ShowInfo();
+        }
+    }
+
+    private void AddCars()
+    {
+        int maxNumberCars = 5;
+
+        Random random = new Random();
+
+        string[] carNames = new string[]
+        {
+            "BMW", "Toyota", "Jeep", "Nissan", "Kia", "Ford", "Mercedes"
+        };
+
+        for (int i = 0; i < maxNumberCars; i++)
+        {
+            string randomCarName = carNames[random.Next(carNames.Length)];
+            DetailStockItem randomDetailForRepair = _detailStockItems[random.Next(_detailStockItems.Count)];
+            _cars.Enqueue(new Car(randomCarName, randomDetailForRepair.Detail.Name));
+        }
+    }
+
+    private void GetCarForRepair()
+    {
+        if(_cars.Count == 0)
+        {
+            Console.WriteLine("На данный момент машин на ремонт нет.");
+            return;
+        }
+
+        Console.WriteLine("Доступные детали для ремонта: ");
+
+        for (int i = 0; i < _detailStockItems.Count; i++)
+        {
+            Console.WriteLine($"{i + 1} - {_detailStockItems[i].Detail.Name}, стоимость {_detailStockItems[i].Detail.Price}, количество {_detailStockItems[i].Quantity}.");
+        }
+
+        Car car = _cars.Peek();
+        car.ShowInfo();
+
+        Console.WriteLine("Введите номер детали которую хотите заменить: ");
+
+        if(int.TryParse(Console.ReadLine(), out int userChoice) && userChoice > 0 && userChoice <= _detailStockItems.Count)
+        {
+            DetailStockItem selectedDetail = _detailStockItems[userChoice - 1];
+            _cars.Dequeue();
+            CalculateCarRepairs(car, selectedDetail);
+        }
+        else
+        {
+            Console.WriteLine("Выбранной детали не существует. Попробуйте еще раз.");
+        }
+
+        Console.WriteLine($"Общий доход сервиса: {_earnings} руб.");
+    }
+
+    private int CalculateCarRepairs(Car car, DetailStockItem selectedDetail)
+    {
+        int fine = 100;
+        int workPrice = 250;
+
+        if(selectedDetail.Detail.Name == car.NameDetail && selectedDetail.Quantity > 0)
+        {
+            _earnings += workPrice + selectedDetail.Detail.Price;
+            selectedDetail.DecreaseQuantity();
+            Console.WriteLine("Деталь успешно заменена.");
+            Console.WriteLine($"Стоимость починки автомобиля {car.Name} - {workPrice + selectedDetail.Detail.Price} руб.");
+            return workPrice + selectedDetail.Detail.Price;
+        }
+        else if(selectedDetail.Quantity == 0)
+        {
+            _earnings -= fine;
+            Console.WriteLine($"Деталей {selectedDetail.Detail.Name} на складе не осталось.");
+            Console.WriteLine($"Вы отказали клиенту и заплатили штраф в размере {fine} руб.");
+            return -fine;
+        }
+        else
+        {
+            _earnings -= fine;
+            Console.WriteLine("Возникла ошибка при ремонте.");
+            Console.WriteLine($"Вы возместили ущерб клиенту в размере - {fine} руб.");
+            return -fine;
+        }
+    }
+}
