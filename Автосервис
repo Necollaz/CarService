@@ -96,7 +96,7 @@ public class CarService
                     break;
 
                 case CommandTakeCarInForRepairs:
-                    GetCarForRepair();
+                    AcceptanceCar();
                     break;
 
                 case CommandFinishWorkingDay:
@@ -152,7 +152,7 @@ public class CarService
         }
     }
 
-    private void GetCarForRepair()
+    private void AcceptanceCar()
     {
         if(_cars.Count == 0)
         {
@@ -190,16 +190,17 @@ public class CarService
     {
         int fine = 100;
         int workPrice = 250;
+        int costOfRepair = workPrice + selectedDetail.Detail.Price;
 
-        if(selectedDetail.Detail.Name == car.NameDetail && selectedDetail.Quantity > 0)
+        if (selectedDetail.Detail.Name == car.NameDetail && selectedDetail.Quantity > 0)
         {
-            _earnings += workPrice + selectedDetail.Detail.Price;
+            _earnings += costOfRepair;
             selectedDetail.DecreaseQuantity();
             Console.WriteLine("Деталь успешно заменена.");
-            Console.WriteLine($"Стоимость починки автомобиля {car.Name} - {workPrice + selectedDetail.Detail.Price} руб.");
-            return workPrice + selectedDetail.Detail.Price;
+            Console.WriteLine($"Стоимость починки автомобиля {car.Name} - {costOfRepair} руб.");
+            return costOfRepair;
         }
-        else if(selectedDetail.Quantity == 0)
+        else if(selectedDetail.Quantity <= 0)
         {
             _earnings -= fine;
             Console.WriteLine($"Деталей {selectedDetail.Detail.Name} на складе не осталось.");
